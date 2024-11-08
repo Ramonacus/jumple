@@ -1,6 +1,7 @@
 import Phaser, { Scene } from 'phaser';
 
-let player;
+import { Player } from '../actors/Player';
+
 let stars;
 let score = 0;
 let scoreText;
@@ -28,11 +29,7 @@ class MainScene extends Scene {
     platforms.create(50, 250, 'ground');
     platforms.create(750, 220, 'ground');
 
-    player = this.physics.add.sprite(100, 450, 'dude');
-
-    player.setBounce(0.2);
-    player.setCollideWorldBounds(true);
-
+    const player = (this.player = new Player(this, 100, 450));
     this.physics.add.collider(player, platforms);
 
     stars = this.physics.add.group({
@@ -49,26 +46,6 @@ class MainScene extends Scene {
     this.physics.add.collider(stars, platforms);
 
     this.physics.add.overlap(player, stars, collectStar, undefined, this);
-
-    this.anims.create({
-      key: 'left',
-      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    this.anims.create({
-      key: 'turn',
-      frames: [{ key: 'dude', frame: 4 }],
-      frameRate: 20,
-    });
-
-    this.anims.create({
-      key: 'right',
-      frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-      frameRate: 10,
-      repeat: -1,
-    });
 
     scoreText = this.add.text(16, 16, 'score: ' + score, {
       fontSize: '32px',
@@ -89,23 +66,7 @@ class MainScene extends Scene {
       return;
     }
     const cursors = this.input.keyboard.createCursorKeys();
-    if (cursors.left.isDown) {
-      player.setVelocityX(-160);
-
-      player.anims.play('left', true);
-    } else if (cursors.right.isDown) {
-      player.setVelocityX(160);
-
-      player.anims.play('right', true);
-    } else {
-      player.setVelocityX(0);
-
-      player.anims.play('turn');
-    }
-
-    if (cursors.up.isDown && player.body.touching.down) {
-      player.setVelocityY(-330);
-    }
+    this.player.update(cursors);
   }
 }
 
@@ -124,7 +85,7 @@ function collectStar(playerObject, star) {
 
   if (activeStars % 2 === 0) {
     const newBombX =
-      player.x > 400
+      playerObject.x > 400
         ? Phaser.Math.Between(0, 400)
         : Phaser.Math.Between(400, 800);
     const newBomb = bombs.create(newBombX, 16, 'bomb');
@@ -134,10 +95,10 @@ function collectStar(playerObject, star) {
   }
 }
 
-function hitBomb() {
+function hitBomb(playerObject) {
   this.physics.pause();
-  player.setTint(0xff0000);
-  player.anims.play('turn');
+  playerObject.setTint(0xff0000);
+  playerObject.anims.play('turn');
   gameOver = true;
 
   this.add
