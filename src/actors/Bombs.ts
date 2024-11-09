@@ -1,11 +1,20 @@
-import Phaser from 'phaser';
+import Phaser, { Scene } from 'phaser';
+
+import { Player } from './Player';
 
 class Bombs extends Phaser.Physics.Arcade.Group {
-  constructor(scene, player, platforms, callback) {
+  player: Player;
+
+  constructor(
+    scene: Scene,
+    player: Player,
+    platforms: Phaser.Physics.Arcade.StaticGroup,
+    callback: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback
+  ) {
     super(scene.physics.world, scene);
 
     scene.physics.add.collider(this, platforms);
-    scene.physics.add.collider(player, this, callback, null, this);
+    scene.physics.add.collider(player, this, callback, undefined, this);
 
     this.player = player;
   }

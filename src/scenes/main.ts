@@ -9,6 +9,9 @@ let scoreText;
 let gameOver = false;
 
 class MainScene extends Scene {
+  player: Player;
+  bombs: Bombs;
+
   preload() {
     this.load.image('sky', 'assets/sky.png');
     this.load.image('ground', 'assets/platform.png');
@@ -49,10 +52,10 @@ class MainScene extends Scene {
 
     scoreText = this.add.text(16, 16, 'score: ' + score, {
       fontSize: '32px',
-      fill: '#000',
+      color: '#000',
     });
 
-    this.bombs = new Bombs(this, player, platforms, hitBombFactory);
+    this.bombs = new Bombs(this, player, platforms, hitBombFactory(this));
   }
 
   update() {
@@ -68,7 +71,7 @@ class MainScene extends Scene {
   }
 }
 
-function collectStar(playerObject, star) {
+function collectStar(_, star) {
   star.disableBody(true, true);
   score += 10;
   scoreText.setText('Score: ' + score);
@@ -86,7 +89,7 @@ function collectStar(playerObject, star) {
   }
 }
 
-function hitBombFactory(scene) {
+function hitBombFactory(scene: Scene) {
   return function hitBomb(playerObject) {
     scene.physics.pause();
     playerObject.setTint(0xff0000);
@@ -96,7 +99,7 @@ function hitBombFactory(scene) {
     scene.add
       .text(400, 300, 'Game Over', {
         fontSize: '64px',
-        fill: '#F00',
+        color: '#F00',
       })
       .setOrigin(0.5);
   };

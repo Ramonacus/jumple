@@ -1,7 +1,11 @@
-import Phaser from 'phaser';
+import Phaser, { Scene } from 'phaser';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y) {
+  declare body: Phaser.Physics.Arcade.Body;
+  speed = 160;
+  jumpSpeed = -520;
+
+  constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player');
 
     scene.add.existing(this);
@@ -12,11 +16,6 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.setGravityY(400);
 
     this.setCollideWorldBounds(true);
-
-    // Movement and animation properties
-    this.speed = 160;
-    this.jumpSpeed = -520;
-
     this.createAnimations(scene);
   }
 
@@ -59,7 +58,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  update(cursors) {
+  update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (cursors.left.isDown) {
       this.flipX = true;
     } else if (cursors.right.isDown) {
@@ -73,7 +72,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  updateAirborne(cursors) {
+  private updateAirborne(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     const { x: speedX, y: speedY } = this.body.velocity;
 
     if (Math.abs(speedY) < 10) {
@@ -94,7 +93,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  updateGrounded(cursors) {
+  private updateGrounded(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (cursors.left.isDown) {
       this.setVelocityX(-this.speed);
       this.play('walk', true);
