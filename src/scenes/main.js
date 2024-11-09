@@ -52,7 +52,7 @@ class MainScene extends Scene {
       fill: '#000',
     });
 
-    this.bombs = new Bombs(this, player, platforms, hitBombFactory(this));
+    this.bombs = new Bombs(this, player, platforms, hitBombFactory);
   }
 
   update() {
