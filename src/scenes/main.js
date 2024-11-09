@@ -1,11 +1,11 @@
 import Phaser, { Scene } from 'phaser';
 
 import { Player } from '../actors/Player';
+import { Bombs } from '../actors/Bombs';
 
 let stars;
 let score = 0;
 let scoreText;
-let bombs;
 let gameOver = false;
 
 class MainScene extends Scene {
@@ -52,9 +52,7 @@ class MainScene extends Scene {
       fill: '#000',
     });
 
-    bombs = this.physics.add.group();
-    this.physics.add.collider(bombs, platforms);
-    this.physics.add.collider(player, bombs, hitBomb, null, this);
+    this.bombs = new Bombs(this, player, platforms, hitBombFactory(this));
   }
 
   update() {
@@ -84,29 +82,24 @@ function collectStar(playerObject, star) {
   }
 
   if (activeStars % 2 === 0) {
-    const newBombX =
-      playerObject.x > 400
-        ? Phaser.Math.Between(0, 400)
-        : Phaser.Math.Between(400, 800);
-    const newBomb = bombs.create(newBombX, 16, 'bomb');
-    newBomb.setBounce(1);
-    newBomb.setCollideWorldBounds();
-    newBomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+    this.bombs.addBomb();
   }
 }
 
-function hitBomb(playerObject) {
-  this.physics.pause();
-  playerObject.setTint(0xff0000);
-  playerObject.anims.play('turn');
-  gameOver = true;
+function hitBombFactory(scene) {
+  return function hitBomb(playerObject) {
+    scene.physics.pause();
+    playerObject.setTint(0xff0000);
+    playerObject.anims.play('jump-down');
+    gameOver = true;
 
-  this.add
-    .text(400, 300, 'Game Over', {
-      fontSize: '64px',
-      fill: '#F00',
-    })
-    .setOrigin(0.5);
+    scene.add
+      .text(400, 300, 'Game Over', {
+        fontSize: '64px',
+        fill: '#F00',
+      })
+      .setOrigin(0.5);
+  };
 }
 
 export { MainScene };
