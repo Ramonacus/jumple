@@ -8,7 +8,7 @@ class Bombs extends Phaser.Physics.Arcade.Group {
   constructor(
     scene: Scene,
     player: Player,
-    platforms: Phaser.Physics.Arcade.StaticGroup,
+    platforms: Phaser.Types.Physics.Arcade.ArcadeColliderType,
     callback: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback
   ) {
     super(scene.physics.world, scene);

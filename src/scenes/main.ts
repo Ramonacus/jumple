@@ -2,6 +2,7 @@ import Phaser, { Scene } from 'phaser';
 
 import { Player } from '../actors/Player';
 import { Bombs } from '../actors/Bombs';
+import { Level } from './Level';
 
 let stars;
 let score = 0;
@@ -11,6 +12,7 @@ let gameOver = false;
 class MainScene extends Scene {
   player: Player;
   bombs: Bombs;
+  level: Level;
 
   preload() {
     this.load.image('sky', 'assets/sky.png');
@@ -21,19 +23,16 @@ class MainScene extends Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
+
+    this.load.image('tileset', 'assets/maps/tileset.png');
+    this.load.tilemapTiledJSON('test-map', 'assets/maps/test-map.json');
   }
+
   create() {
-    this.add.image(400, 300, 'sky');
+    this.add.image(180, 240, 'sky');
 
-    const platforms = this.physics.add.staticGroup();
-
-    platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-    platforms.create(600, 400, 'ground');
-    platforms.create(50, 250, 'ground');
-    platforms.create(750, 220, 'ground');
-
+    this.level = new Level(this);
     const player = (this.player = new Player(this, 100, 450));
-    this.physics.add.collider(player, platforms);
 
     stars = this.physics.add.group({
       key: 'star',
@@ -46,7 +45,8 @@ class MainScene extends Scene {
       return true;
     });
 
-    this.physics.add.collider(stars, platforms);
+    this.physics.add.collider(stars, this.level.platformsLayer);
+    this.physics.add.collider(player, this.level.platformsLayer);
 
     this.physics.add.overlap(player, stars, collectStar, undefined, this);
 
@@ -55,7 +55,12 @@ class MainScene extends Scene {
       color: '#000',
     });
 
-    this.bombs = new Bombs(this, player, platforms, hitBombFactory(this));
+    this.bombs = new Bombs(
+      this,
+      player,
+      this.level.platformsLayer,
+      hitBombFactory(this)
+    );
   }
 
   update() {
