@@ -1,66 +1,57 @@
 import Phaser, { Scene } from 'phaser';
 
 import { Player } from '../actors/Player';
-import { Bombs } from '../actors/Bombs';
-import { Level } from './Level';
+import { Level } from '../terrain/Level';
+import { LevelGenerator } from '../terrain/LevelGenerator';
+import { GAME_HEIGHT, GAME_WIDTH } from '../game';
 
 let stars;
 let score = 0;
 let scoreText;
 let gameOver = false;
 
+export const ROOMS = {
+  'rooms-0': [''], // rooms with spawn point
+  'rooms-1': ['assets/maps/test-map.json'],
+};
+
 class MainScene extends Scene {
   player: Player;
-  bombs: Bombs;
+  levelGenerator: LevelGenerator;
   level: Level;
+
+  camera: Phaser.Cameras.Scene2D.Camera;
 
   preload() {
     this.load.image('sky', 'assets/sky.png');
-    this.load.image('ground', 'assets/platform.png');
-    this.load.image('star', 'assets/star.png');
-    this.load.image('bomb', 'assets/bomb.png');
     this.load.spritesheet('player', 'assets/player-sheet.png', {
       frameWidth: 32,
       frameHeight: 32,
     });
 
     this.load.image('tileset', 'assets/maps/tileset.png');
-    this.load.tilemapTiledJSON('test-map', 'assets/maps/test-map.json');
+
+    // Load all rooms tilemaps
+    Object.keys(ROOMS).forEach((key) => {
+      const rooms = ROOMS[key];
+      rooms.forEach((roomPath, i) => {
+        this.load.json(key + `-${i}`, roomPath);
+      });
+    });
   }
 
   create() {
     this.add.image(180, 240, 'sky');
 
-    this.level = new Level(this);
-    const player = (this.player = new Player(this, 100, 450));
+    this.camera = this.cameras.main;
 
-    stars = this.physics.add.group({
-      key: 'star',
-      repeat: 11,
-      setXY: { x: 12, y: 0, stepX: 70 },
-    });
+    this.levelGenerator = new LevelGenerator(GAME_WIDTH, GAME_HEIGHT, 2, 2);
+    this.level = this.levelGenerator.createLevel(this);
+    const player = (this.player = new Player(this, 0, 0));
 
-    stars.children.iterate((child) => {
-      child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-      return true;
-    });
-
-    this.physics.add.collider(stars, this.level.platformsLayer);
     this.physics.add.collider(player, this.level.platformsLayer);
-
-    this.physics.add.overlap(player, stars, collectStar, undefined, this);
-
-    scoreText = this.add.text(16, 16, 'score: ' + score, {
-      fontSize: '32px',
-      color: '#000',
-    });
-
-    this.bombs = new Bombs(
-      this,
-      player,
-      this.level.platformsLayer,
-      hitBombFactory(this)
-    );
+    player.body.collideWorldBounds = false;
+    this.camera.startFollow(player, true, 0.2, 0.2, 0, 75);
   }
 
   update() {
