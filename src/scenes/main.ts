@@ -4,23 +4,23 @@ import { Player } from '../actors/Player';
 import { Level } from '../terrain/Level';
 import { LevelGenerator } from '../terrain/LevelGenerator';
 import { GAME_HEIGHT, GAME_WIDTH } from '../game';
+import { RoomManager } from '../rooms/RoomsManager';
 
 let stars;
 let score = 0;
 let scoreText;
 let gameOver = false;
 
-export const ROOMS = {
-  'rooms-0': [''], // rooms with spawn point
-  'rooms-1': ['assets/maps/test-map.json'],
-};
-
 class MainScene extends Scene {
   player: Player;
+
   levelGenerator: LevelGenerator;
+
   level: Level;
 
   camera: Phaser.Cameras.Scene2D.Camera;
+
+  roomsManager: RoomManager;
 
   preload() {
     this.load.image('sky', 'assets/sky.png');
@@ -28,29 +28,33 @@ class MainScene extends Scene {
       frameWidth: 32,
       frameHeight: 32,
     });
-
-    this.load.image('tileset', 'assets/maps/tileset.png');
-
-    // Load all rooms tilemaps
-    Object.keys(ROOMS).forEach((key) => {
-      const rooms = ROOMS[key];
-      rooms.forEach((roomPath, i) => {
-        this.load.json(key + `-${i}`, roomPath);
-      });
-    });
+    this.load.image('tileset', 'assets/tilesets/base_tileset.png');
+    this.roomsManager = new RoomManager(this);
+    this.roomsManager.loadRooms();
   }
 
   create() {
-    this.add.image(180, 240, 'sky');
-
+    this.add.image(20000, 2000, 'sky');
     this.camera = this.cameras.main;
-
-    this.levelGenerator = new LevelGenerator(GAME_WIDTH, GAME_HEIGHT, 2, 2);
+    this.levelGenerator = new LevelGenerator(
+      GAME_WIDTH,
+      GAME_HEIGHT,
+      5,
+      5,
+      this.roomsManager
+    );
     this.level = this.levelGenerator.createLevel(this);
-    const player = (this.player = new Player(this, 0, 0));
+
+    if (!this.level.hasSpawn()) {
+      throw new Error('Level has no spawn point.');
+    }
+
+    const playerSpawn = this.level.getSpawn();
+    const player = playerSpawn.spawnPlayer();
 
     this.physics.add.collider(player, this.level.platformsLayer);
     player.body.collideWorldBounds = false;
+    this.player = player;
     this.camera.startFollow(player, true, 0.2, 0.2, 0, 75);
   }
 
@@ -67,7 +71,7 @@ class MainScene extends Scene {
   }
 }
 
-function collectStar(_, star) {
+/* function collectStar(_, star) {
   star.disableBody(true, true);
   score += 10;
   scoreText.setText('Score: ' + score);
@@ -98,7 +102,7 @@ function hitBombFactory(scene: Scene) {
         color: '#F00',
       })
       .setOrigin(0.5);
-  };
-}
+  }; 
+} */
 
 export { MainScene };

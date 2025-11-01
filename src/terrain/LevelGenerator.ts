@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { Level } from './Level';
+import { RoomType } from '../types/rooms';
+import { RoomManager } from '../rooms/RoomsManager';
 
 enum CriticalPathStep {
   RIGHT,
@@ -12,7 +14,8 @@ class LevelGenerator {
     private roomWidth: number,
     private roomHeight: number,
     private levelWidth: number,
-    private levelHeight: number
+    private levelHeight: number,
+    private roomsManager: RoomManager
   ) {
     if (this.levelWidth <= 0 || this.levelHeight < 0) {
       throw new Error('Invalid layout size.');
@@ -23,6 +26,7 @@ class LevelGenerator {
     const roomsLayout = this.generateLevelLayout();
     return new Level(
       scene,
+      this.roomsManager,
       roomsLayout,
       this.roomWidth / 8,
       this.roomHeight / 8
@@ -30,36 +34,44 @@ class LevelGenerator {
   }
 
   // Generate critical path
-  private generateLevelLayout() {
+  private generateLevelLayout(): RoomType[][] {
     const layout: number[][] = [];
-    let currentRow = 0;
+    let currentRow = this.levelHeight - 1;
     let currentColumn = 0;
 
-    layout.push(Array(this.levelWidth).fill(0));
-    layout[currentRow][currentColumn] = 1;
+    for (let i = 0; i < this.levelHeight; i++) {
+      layout.push(Array(this.levelWidth).fill(RoomType.NON_CRITICAL));
+    }
 
-    while (layout.length < this.levelHeight) {
+    layout[currentRow][currentColumn] = RoomType.START;
+    currentColumn += 1;
+    layout[currentRow][currentColumn] = RoomType.HALLWAY;
+
+    while (currentRow !== 0) {
       const movement = this.getRandomStep();
 
-      if (movement === CriticalPathStep.UP) {
-        layout.push(Array(this.levelWidth).fill(0));
-        currentRow += 1;
+      if (
+        movement === CriticalPathStep.UP ||
+        (movement === CriticalPathStep.LEFT && currentColumn === 0) ||
+        (movement === CriticalPathStep.RIGHT &&
+          currentColumn === this.levelWidth - 1)
+      ) {
+        layout[currentRow][currentColumn] = RoomType.CROSS;
+        currentRow -= 1;
+        layout[currentRow][currentColumn] = RoomType.INVERTED_T;
       } else {
-        const direction = movement === CriticalPathStep.LEFT ? -1 : 1;
-        currentColumn += direction;
+        let direction = movement === CriticalPathStep.LEFT ? -1 : 1;
 
         if (
-          (movement === CriticalPathStep.LEFT && currentColumn === 0) ||
-          (movement === CriticalPathStep.RIGHT &&
-            currentColumn === this.levelWidth - 1)
+          layout[currentRow][currentColumn + direction] !==
+          RoomType.NON_CRITICAL
         ) {
-          layout[currentRow][currentColumn] = 1;
-          layout.push(Array(this.levelWidth).fill(0));
-          currentRow += 1;
+          direction = direction * -1;
         }
-      }
 
-      layout[currentRow][currentColumn] = 1;
+        currentColumn += direction;
+        layout[currentRow][currentColumn] = RoomType.HALLWAY;
+      }
     }
 
     return layout;

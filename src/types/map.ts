@@ -9,6 +9,7 @@ export type Layer = {
   width: number;
   x: number;
   y: number;
+  objects?: RoomObject[];
 };
 
 export type Tileset = {
@@ -26,7 +27,7 @@ export type Tileset = {
   tilewidth: number;
 };
 
-export type MapObject = {
+export type RoomTilemap = {
   compressionlevel: number;
   height: number;
   infinite: boolean;
@@ -43,3 +44,20 @@ export type MapObject = {
   version: string;
   width: number;
 };
+
+export type RoomObject = {
+  height: number;
+  id: number;
+  name: string;
+  rotation: number;
+  type: string;
+  visible: boolean;
+  width: number;
+  x: number;
+  y: number;
+};
+
+export enum LayerType {
+  TERRAIN = 'Terrain',
+  OBJECTS = 'Objects',
+}

@@ -1,8 +1,8 @@
 import { Scene } from 'phaser';
-import { ROOMS } from '../scenes/main';
-import { MapObject } from '../types';
-
-const PLATFORMS_LAYER_NAME = 'platforms';
+import { Spawn } from '../actors/Spawn';
+import { RoomType } from '../types/rooms';
+import { RoomManager } from '../rooms/RoomsManager';
+import { Layer, LayerType, RoomObject, RoomTilemap } from '../types/map';
 
 class Level extends Phaser.GameObjects.GameObject {
   private _platformsLayer: Phaser.Tilemaps.TilemapLayer | null;
@@ -11,9 +11,12 @@ class Level extends Phaser.GameObjects.GameObject {
 
   private levelColumnCount: number;
 
+  private spawn: Spawn;
+
   constructor(
     public scene: Scene,
-    private layout: number[][],
+    private roomsManager: RoomManager,
+    private layout: RoomType[][],
     private roomWidth: number,
     private roomHeight: number
   ) {
@@ -40,68 +43,97 @@ class Level extends Phaser.GameObjects.GameObject {
     for (let i = 0; i < this.layout.length; i++) {
       for (let j = 0; j < this.layout[0].length; j++) {
         const roomType = this.layout[i][j];
-
-        if (roomType === 0) {
-          continue;
-        }
-
-        const roomTypeKey = `rooms-${roomType}`;
-
-        if (!ROOMS[roomTypeKey] || ROOMS[roomTypeKey].length === 0) {
-          throw new Error(`'Invalid room type: ${roomType}`);
-        }
-
-        // Select random room for the corresponding type
-        const roomIndex = Math.round(
-          Math.random() * (ROOMS[roomTypeKey].length - 1)
-        );
-        const roomKey = `rooms-1-${roomIndex}`;
-        const roomJson: MapObject = this.scene.cache.json.get(roomKey);
-
-        if (!roomJson) {
-          throw new Error(`Couldn't find ${roomKey} room json.`);
-        }
-
-        //Copy room layout to full level array
-        const platformsLayer = roomJson.layers.filter(
-          (layer) => layer.name === PLATFORMS_LAYER_NAME
+        const room = this.roomsManager.getRandomRoomOfType(roomType);
+        const terrainLayer = room.layers.find(
+          (layer: Layer) => layer.name === LayerType.TERRAIN
         );
 
-        if (platformsLayer.length === 0) {
-          throw new Error(`Platforms layer not found in ${roomKey}`);
+        if (!terrainLayer) {
+          throw new Error(
+            `Terrain layer not found in room of type ${roomType}.`
+          );
         }
 
-        // Fill level with room info
-        platformsLayer[0].data.forEach((tile, tileIndex) => {
-          const tileRow =
-            this.roomHeight * i + Math.floor(tileIndex / this.roomWidth);
-          const tileColumn = this.roomWidth * j + (tileIndex % this.roomWidth);
-          level[tileRow][tileColumn] = tile > 0 ? tile - 1 : 0;
-        });
+        this.spawnRoomObjects(room, j, i);
+        this.fillRoomTerrain(level, terrainLayer, j, i);
       }
     }
 
     level = this.fillLevelBorders(level);
-
     const map = this.scene.make.tilemap({
       data: level,
-      tileWidth: 8,
-      tileHeight: 8,
+      tileWidth: 16, //TODO: fix magic number (tile size)
+      tileHeight: 16,
     });
-    const tiles = map.addTilesetImage('tileset');
 
-    if (!tiles) {
-      throw new Error('Could not find level tiles.');
+    const tileset = map.addTilesetImage('tileset', 'tileset');
+    console.log('tileset', tileset);
+    if (!tileset) {
+      throw new Error('Could not create tileset for level.');
     }
 
-    this._platformsLayer = map.createLayer(0, tiles);
+    this._platformsLayer = map.createLayer(0, tileset);
 
     if (!this._platformsLayer) {
       throw new Error('Could not generate the platforms layer.');
     }
 
-    this._platformsLayer.setCollisionBetween(0, this._platformsLayer.width);
+    this._platformsLayer.setCollisionByExclusion([-1]);
     return level;
+  }
+
+  private fillRoomTerrain(
+    level: number[][],
+    terrainLayer: Layer,
+    offsetX: number,
+    offsetY: number
+  ) {
+    terrainLayer.data.forEach((tile, tileIndex) => {
+      const tileRow =
+        this.roomHeight * offsetY + Math.floor(tileIndex / this.roomWidth);
+      const tileColumn =
+        this.roomWidth * offsetX + (tileIndex % this.roomWidth);
+      level[tileRow][tileColumn] = tile - 1;
+    });
+  }
+
+  private spawnRoomObjects(
+    room: RoomTilemap,
+    offsetX: number,
+    offsetY: number
+  ) {
+    const objectsLayer = room.layers.find(
+      (layer: Layer) => layer.name === LayerType.OBJECTS
+    );
+
+    if (!objectsLayer || !objectsLayer.objects) {
+      throw new Error('Objects layer not found in start room.');
+    }
+
+    objectsLayer.objects.forEach((obj: RoomObject) => {
+      switch (obj.name) {
+        case 'Spawn':
+          this.spawn = this.getRoomSpawnObject(obj, offsetX, offsetY);
+          break;
+      }
+    });
+  }
+
+  private getRoomSpawnObject(
+    spawnObject: RoomObject,
+    offsetX: number,
+    offsetY: number
+  ): Spawn {
+    const spawn = new Spawn(
+      this.scene,
+      spawnObject.x + offsetX * this.roomWidth * 16, //TODO: fix magic number (tile size)
+      spawnObject.y + offsetY * this.roomHeight * 16, //TODO: fix magic number (tile size)
+      spawnObject.width,
+      spawnObject.height
+    );
+
+    this.spawn = spawn;
+    return spawn;
   }
 
   private fillLevelBorders(level: number[][]): number[][] {
@@ -114,6 +146,14 @@ class Level extends Phaser.GameObjects.GameObject {
     });
 
     return level;
+  }
+
+  public hasSpawn(): boolean {
+    return !!this.spawn;
+  }
+
+  public getSpawn(): Spawn {
+    return this.spawn;
   }
 }
 
