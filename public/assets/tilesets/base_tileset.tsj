@@ -1,0 +1,16 @@
+{ "columns":4,
+ "fillmode":"preserve-aspect-fit",
+ "image":"base_tileset.png",
+ "imageheight":64,
+ "imagewidth":64,
+ "margin":0,
+ "name":"base_tileset",
+ "objectalignment":"topleft",
+ "spacing":0,
+ "tilecount":16,
+ "tiledversion":"1.11.0",
+ "tileheight":16,
+ "tilewidth":16,
+ "type":"tileset",
+ "version":"1.10"
+}

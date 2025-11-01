@@ -7,16 +7,21 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   deceleration = 10;
   speed = 0;
   airborneSpeed = 200;
-  jumpSpeed = -520;
+  jumpSpeed = -450;
 
   isJumping = false;
   canCoyoteJump = false;
-  coyoteTime = 150;
-  coyoteTimeTimeout: number;
+  coyoteTime = 100;
+  coyoteTimeTimeout: number | undefined;
 
   jumpBufferTime = 125;
-  jumpBufferTimeout: number;
+  jumpBufferTimeout: number | undefined;
   isJumpBuffered = false;
+
+  isInWall = false;
+  inWallBuffer: number | undefined;
+  inWallBufferTime = 200;
+  wallDirection: 'left' | 'right' | null = null;
 
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player');
@@ -32,7 +37,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.createAnimations(scene);
   }
 
-  createAnimations(scene) {
+  createAnimations(scene: Scene) {
     scene.anims.create({
       key: 'walk',
       frames: scene.anims.generateFrameNumbers('player', { start: 4, end: 7 }),
@@ -78,7 +83,9 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       this.flipX = false;
     }
 
-    if (this.body.onFloor()) {
+    if (this.isInWall) {
+      this.updateOnWall(cursors);
+    } else if (this.body.onFloor()) {
       this.updateGrounded(cursors);
     } else {
       this.updateAirborne(cursors);
@@ -108,6 +115,11 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       const newSpeedX = Math.abs(speedX) < 10 ? 0 : speedX * 0.95;
 
       this.setVelocityX(newSpeedX);
+    }
+
+    if (this.body.onWall()) {
+      this.grabWall();
+      return;
     }
 
     this.handleJump(cursors);
@@ -142,6 +154,43 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.handleJump(cursors);
+  }
+
+  private updateOnWall(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
+    if (
+      cursors.up.isDown &&
+      ((this.wallDirection === 'left' && cursors.right.isDown) ||
+        (this.wallDirection === 'right' && cursors.left.isDown))
+    ) {
+      const direction = this.body.blocked.left ? -1 : 1;
+      this.isJumping = true;
+      this.setVelocityY(this.jumpSpeed);
+      this.setVelocityX(this.jumpSpeed * direction);
+      this.leaveWall();
+      return;
+    }
+
+    if (
+      (this.wallDirection === 'left' && cursors.left.isDown) ||
+      (this.wallDirection === 'right' && cursors.right.isDown)
+    ) {
+      this.setVelocityY(0);
+      return;
+    }
+
+    this.inWallBuffer = window.setTimeout(() => {
+      this.leaveWall();
+    }, this.inWallBufferTime);
+  }
+
+  private grabWall() {
+    this.isInWall = true;
+    this.wallDirection = this.body.blocked.left ? 'left' : 'right';
+  }
+
+  private leaveWall() {
+    this.isInWall = false;
+    this.wallDirection = null;
   }
 
   private canJump() {
