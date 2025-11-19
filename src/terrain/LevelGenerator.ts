@@ -11,8 +11,6 @@ enum CriticalPathStep {
 
 class LevelGenerator {
   constructor(
-    private roomWidth: number,
-    private roomHeight: number,
     private levelWidth: number,
     private levelHeight: number,
     private roomsManager: RoomManager
@@ -24,13 +22,7 @@ class LevelGenerator {
 
   public createLevel(scene: Phaser.Scene): Level {
     const roomsLayout = this.generateLevelLayout();
-    return new Level(
-      scene,
-      this.roomsManager,
-      roomsLayout,
-      this.roomWidth / 8,
-      this.roomHeight / 8
-    );
+    return new Level(scene, this.roomsManager, roomsLayout);
   }
 
   // Generate critical path

@@ -55,9 +55,36 @@ export type RoomObject = {
   width: number;
   x: number;
   y: number;
+  properties?: [];
+};
+
+export type RoomObjectProperty = {
+  name: string;
+  type: string;
+  value: string;
 };
 
 export enum LayerType {
   TERRAIN = 'Terrain',
   OBJECTS = 'Objects',
+  OBSTACLES = 'Obstacles',
+}
+
+export enum ObjectType {
+  SPAWN = 'Spawn',
+}
+
+export enum ObstacleType {
+  SPIKES = 'Spikes',
+}
+
+export enum RoomObjectPropertyName {
+  PLACEMENT = 'Placement',
+}
+
+export enum ObjectPlacement {
+  TOP = 'Top',
+  BOTTOM = 'Bottom',
+  LEFT = 'Left',
+  RIGHT = 'Right',
 }

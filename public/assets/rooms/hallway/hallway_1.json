@@ -76,31 +76,177 @@
         {
          "draworder":"topdown",
          "id":3,
-         "name":"Objects",
+         "name":"Obstacles",
          "objects":[
                 {
-                 "gid":1,
                  "height":16,
-                 "id":10,
-                 "name":"",
+                 "id":12,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Bottom"
+                        }],
                  "rotation":0,
-                 "type":"",
+                 "type":"Spikes",
                  "visible":true,
                  "width":16,
-                 "x":501.333333333333,
-                 "y":324
+                 "x":96.0625,
+                 "y":432.0625
                 }, 
                 {
-                 "gid":1,
                  "height":16,
-                 "id":11,
-                 "name":"",
+                 "id":13,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Bottom"
+                        }],
                  "rotation":0,
-                 "type":"",
+                 "type":"Spikes",
                  "visible":true,
                  "width":16,
-                 "x":534.666666666667,
-                 "y":324
+                 "x":112.1875,
+                 "y":432.0625
+                }, 
+                {
+                 "height":16,
+                 "id":14,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Bottom"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":128.1875,
+                 "y":432.125
+                }, 
+                {
+                 "height":16,
+                 "id":15,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Top"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":208,
+                 "y":320
+                }, 
+                {
+                 "height":16,
+                 "id":21,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Right"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":208,
+                 "y":544
+                }, 
+                {
+                 "height":16,
+                 "id":23,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Right"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":208,
+                 "y":560
+                }, 
+                {
+                 "height":16,
+                 "id":24,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Left"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":304,
+                 "y":592
+                }, 
+                {
+                 "height":16,
+                 "id":25,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Left"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":304,
+                 "y":576
+                }, 
+                {
+                 "height":16,
+                 "id":26,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Top"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":192,
+                 "y":320
+                }, 
+                {
+                 "height":16,
+                 "id":27,
+                 "name":"Spikes",
+                 "properties":[
+                        {
+                         "name":"Placement",
+                         "type":"string",
+                         "value":"Bottom"
+                        }],
+                 "rotation":0,
+                 "type":"Spikes",
+                 "visible":true,
+                 "width":16,
+                 "x":144,
+                 "y":432
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -109,7 +255,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":12,
+ "nextobjectid":28,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.0",
