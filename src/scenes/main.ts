@@ -3,12 +3,10 @@ import Phaser, { Scene } from 'phaser';
 import { Player } from '../actors/Player';
 import { Level } from '../terrain/Level';
 import { LevelGenerator } from '../terrain/LevelGenerator';
-import { GAME_HEIGHT, GAME_WIDTH } from '../game';
 import { RoomManager } from '../rooms/RoomsManager';
+import { Obstacle } from '../actors/Spikes';
+import { PlayerEvents } from '../types/events';
 
-let stars;
-let score = 0;
-let scoreText;
 let gameOver = false;
 
 class MainScene extends Scene {
@@ -23,26 +21,21 @@ class MainScene extends Scene {
   roomsManager: RoomManager;
 
   preload() {
-    this.load.image('sky', 'assets/sky.png');
     this.load.spritesheet('player', 'assets/player-sheet.png', {
       frameWidth: 32,
       frameHeight: 32,
     });
     this.load.image('tileset', 'assets/tilesets/base_tileset.png');
+    this.load.image('spikes', 'assets/spikes.png');
+    this.load.image('spawn', 'assets/spawn.png');
     this.roomsManager = new RoomManager(this);
     this.roomsManager.loadRooms();
   }
 
   create() {
-    this.add.image(20000, 2000, 'sky');
     this.camera = this.cameras.main;
-    this.levelGenerator = new LevelGenerator(
-      GAME_WIDTH,
-      GAME_HEIGHT,
-      5,
-      5,
-      this.roomsManager
-    );
+
+    this.levelGenerator = new LevelGenerator(5, 5, this.roomsManager);
     this.level = this.levelGenerator.createLevel(this);
 
     if (!this.level.hasSpawn()) {
@@ -53,9 +46,15 @@ class MainScene extends Scene {
     const player = playerSpawn.spawnPlayer();
 
     this.physics.add.collider(player, this.level.platformsLayer);
+    this.physics.add.collider(player, this.level.obstacles, (_, obstacle) =>
+      this.onPlayerObstacleCollision(player, obstacle as Obstacle)
+    );
+
     player.body.collideWorldBounds = false;
     this.player = player;
     this.camera.startFollow(player, true, 0.2, 0.2, 0, 75);
+
+    this.events.addListener(PlayerEvents.DEATH, this.onPlayerDeath, this);
   }
 
   update() {
@@ -64,45 +63,22 @@ class MainScene extends Scene {
     }
 
     if (gameOver) {
+      this.physics.pause();
       return;
     }
+
     const cursors = this.input.keyboard.createCursorKeys();
     this.player.update(cursors);
   }
-}
 
-/* function collectStar(_, star) {
-  star.disableBody(true, true);
-  score += 10;
-  scoreText.setText('Score: ' + score);
-
-  const activeStars = stars.countActive(true);
-
-  if (activeStars === 0) {
-    stars.children.iterate((child) =>
-      child.enableBody(true, child.x, 0, true, true)
-    );
+  onPlayerObstacleCollision(player: Player, obstacle: Obstacle): void {
+    obstacle.onPlayerCollision(player);
   }
 
-  if (activeStars % 2 === 0) {
-    this.bombs.addBomb();
-  }
-}
-
-function hitBombFactory(scene: Scene) {
-  return function hitBomb(playerObject) {
-    scene.physics.pause();
-    playerObject.setTint(0xff0000);
-    playerObject.anims.play('jump-down');
+  onPlayerDeath(): void {
+    console.log('Player has died. Game Over.');
     gameOver = true;
-
-    scene.add
-      .text(400, 300, 'Game Over', {
-        fontSize: '64px',
-        color: '#F00',
-      })
-      .setOrigin(0.5);
-  }; 
-} */
+  }
+}
 
 export { MainScene };

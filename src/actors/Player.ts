@@ -1,4 +1,5 @@
 import Phaser, { Scene } from 'phaser';
+import { PlayerEvents } from '../types/events';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
@@ -238,6 +239,10 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       clearTimeout(this.jumpBufferTimeout);
       this.jumpBufferTimeout = 0;
     }
+  }
+
+  takeHit() {
+    this.scene.events.emit(PlayerEvents.DEATH);
   }
 }
 

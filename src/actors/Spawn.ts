@@ -1,6 +1,6 @@
 import { Player } from './Player';
 
-class Spawn extends Phaser.Physics.Arcade.Sprite {
+class Spawn extends Phaser.GameObjects.Sprite {
   constructor(
     scene: Phaser.Scene,
     x: number,
@@ -8,7 +8,7 @@ class Spawn extends Phaser.Physics.Arcade.Sprite {
     width: number,
     height: number
   ) {
-    super(scene, x, y, 'spawn');
+    super(scene, x, y + 32, 'spawn');
 
     this.width = width;
     this.height = height;
@@ -16,11 +16,7 @@ class Spawn extends Phaser.Physics.Arcade.Sprite {
   }
 
   spawnPlayer(): Player {
-    return new Player(
-      this.scene,
-      this.x + this.width / 2,
-      this.y - this.height
-    );
+    return new Player(this.scene, this.x, this.y);
   }
 }
 

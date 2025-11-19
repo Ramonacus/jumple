@@ -2,29 +2,30 @@ import { Scene } from 'phaser';
 import { Spawn } from '../actors/Spawn';
 import { RoomType } from '../types/rooms';
 import { RoomManager } from '../rooms/RoomsManager';
-import { Layer, LayerType, RoomObject, RoomTilemap } from '../types/map';
+import {
+  Layer,
+  LayerType,
+  ObjectType,
+  ObstacleType,
+  RoomObject,
+  RoomTilemap,
+} from '../types/map';
+import { TILE_SIZE } from '../game';
+import { Spike } from '../actors/Spikes';
 
 class Level extends Phaser.GameObjects.GameObject {
+  private readonly ROOM_WIDTH_TILES = 45; // TO DO: Determine a good size of the rooms
+
+  private readonly ROOM_HEIGHT_TILES = 60;
+
   private _platformsLayer: Phaser.Tilemaps.TilemapLayer | null;
-
-  private levelRowCount: number;
-
-  private levelColumnCount: number;
 
   private spawn: Spawn;
 
-  constructor(
-    public scene: Scene,
-    private roomsManager: RoomManager,
-    private layout: RoomType[][],
-    private roomWidth: number,
-    private roomHeight: number
-  ) {
-    super(scene, '');
+  private _obstacles: Phaser.GameObjects.Group;
 
-    this.levelRowCount = this.roomHeight * this.layout.length;
-    this.levelColumnCount = this.roomWidth * this.layout[0].length;
-    this.generateLevel();
+  get obstacles(): Phaser.GameObjects.Group {
+    return this._obstacles;
   }
 
   get platformsLayer(): Phaser.Tilemaps.TilemapLayer {
@@ -35,15 +36,39 @@ class Level extends Phaser.GameObjects.GameObject {
     return this._platformsLayer;
   }
 
+  constructor(
+    public scene: Scene,
+    private roomsManager: RoomManager,
+    private layout: RoomType[][]
+  ) {
+    super(scene, '');
+    this._obstacles = this.scene.add.group();
+
+    this.generateLevel();
+  }
+
   generateLevel() {
-    let level = Array.from({ length: this.levelRowCount }, () =>
-      Array(this.levelColumnCount).fill(0)
+    const levelRowCount = this.layout.length * this.ROOM_HEIGHT_TILES;
+    const levelColumnCount = this.layout[0].length * this.ROOM_WIDTH_TILES;
+
+    let level = Array.from({ length: levelRowCount }, () =>
+      Array(levelColumnCount).fill(0)
     );
 
     for (let i = 0; i < this.layout.length; i++) {
       for (let j = 0; j < this.layout[0].length; j++) {
         const roomType = this.layout[i][j];
         const room = this.roomsManager.getRandomRoomOfType(roomType);
+
+        if (
+          room.width !== this.ROOM_WIDTH_TILES ||
+          room.height !== this.ROOM_HEIGHT_TILES
+        ) {
+          throw new Error(
+            `Room size mismatch. Expected ${this.ROOM_WIDTH_TILES}x${this.ROOM_HEIGHT_TILES}, got ${room.width}x${room.height}.`
+          );
+        }
+
         const terrainLayer = room.layers.find(
           (layer: Layer) => layer.name === LayerType.TERRAIN
         );
@@ -54,7 +79,7 @@ class Level extends Phaser.GameObjects.GameObject {
           );
         }
 
-        this.spawnRoomObjects(room, j, i);
+        this.spawnRoomGameObjects(room, j, i);
         this.fillRoomTerrain(level, terrainLayer, j, i);
       }
     }
@@ -62,8 +87,8 @@ class Level extends Phaser.GameObjects.GameObject {
     level = this.fillLevelBorders(level);
     const map = this.scene.make.tilemap({
       data: level,
-      tileWidth: 16, //TODO: fix magic number (tile size)
-      tileHeight: 16,
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
     });
 
     const tileset = map.addTilesetImage('tileset', 'tileset');
@@ -90,59 +115,102 @@ class Level extends Phaser.GameObjects.GameObject {
   ) {
     terrainLayer.data.forEach((tile, tileIndex) => {
       const tileRow =
-        this.roomHeight * offsetY + Math.floor(tileIndex / this.roomWidth);
+        this.ROOM_HEIGHT_TILES * offsetY +
+        Math.floor(tileIndex / this.ROOM_WIDTH_TILES);
       const tileColumn =
-        this.roomWidth * offsetX + (tileIndex % this.roomWidth);
+        this.ROOM_WIDTH_TILES * offsetX + (tileIndex % this.ROOM_WIDTH_TILES);
+
       level[tileRow][tileColumn] = tile - 1;
     });
   }
 
-  private spawnRoomObjects(
+  private spawnRoomGameObjects(
     room: RoomTilemap,
     offsetX: number,
     offsetY: number
-  ) {
-    const objectsLayer = room.layers.find(
-      (layer: Layer) => layer.name === LayerType.OBJECTS
-    );
-
-    if (!objectsLayer || !objectsLayer.objects) {
-      throw new Error('Objects layer not found in start room.');
-    }
-
-    objectsLayer.objects.forEach((obj: RoomObject) => {
-      switch (obj.name) {
-        case 'Spawn':
-          this.spawn = this.getRoomSpawnObject(obj, offsetX, offsetY);
+  ): void {
+    room.layers.forEach((layer: Layer) => {
+      switch (layer.name) {
+        case LayerType.OBJECTS:
+          this.spawnRoomObjects(layer, offsetX, offsetY);
+          break;
+        case LayerType.OBSTACLES:
+          this.spawnRoomObstacles(layer, offsetX, offsetY);
           break;
       }
     });
   }
 
-  private getRoomSpawnObject(
+  private spawnRoomObjects(
+    objectsLayer: Layer,
+    offsetX: number,
+    offsetY: number
+  ) {
+    if (!objectsLayer.objects) {
+      return;
+    }
+
+    objectsLayer.objects.forEach((obj: RoomObject) => {
+      switch (obj.name) {
+        case ObjectType.SPAWN:
+          this.spawn = this.instanceSpawnObject(obj, offsetX, offsetY);
+          break;
+      }
+    });
+  }
+
+  private spawnRoomObstacles(
+    obstaclesLayer: Layer,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    if (!obstaclesLayer.objects) {
+      return;
+    }
+
+    obstaclesLayer.objects.forEach((obj: RoomObject) => {
+      console.log('Spawning obstacle:', obj);
+      switch (obj.name) {
+        case ObstacleType.SPIKES:
+          this._obstacles.add(
+            new Spike(
+              obj,
+              this.scene,
+              obj.x + offsetX * this.ROOM_WIDTH_TILES * TILE_SIZE,
+              obj.y + offsetY * this.ROOM_HEIGHT_TILES * TILE_SIZE
+            )
+          );
+          break;
+      }
+    });
+  }
+
+  private instanceSpawnObject(
     spawnObject: RoomObject,
     offsetX: number,
     offsetY: number
-  ): Spawn {
+  ) {
     const spawn = new Spawn(
       this.scene,
-      spawnObject.x + offsetX * this.roomWidth * 16, //TODO: fix magic number (tile size)
-      spawnObject.y + offsetY * this.roomHeight * 16, //TODO: fix magic number (tile size)
+      spawnObject.x + offsetX * this.ROOM_WIDTH_TILES * TILE_SIZE,
+      spawnObject.y + offsetY * this.ROOM_HEIGHT_TILES * TILE_SIZE,
       spawnObject.width,
       spawnObject.height
     );
 
-    this.spawn = spawn;
     return spawn;
   }
 
   private fillLevelBorders(level: number[][]): number[][] {
-    level[0] = Array(this.levelColumnCount).fill(1);
-    level[this.levelRowCount - 1] = Array(this.levelColumnCount).fill(1);
+    const levelHeight = level.length;
+    const levelWidth = level[0].length;
+
+    level[0] = Array(levelWidth).fill(0);
+    level[levelHeight - 1] = Array(levelWidth).fill(0);
 
     level.forEach((row) => {
-      row[0] = 1;
-      row[this.levelColumnCount - 1] = 1;
+      row[0] = 0;
+      row[levelWidth - 1] = 0;
     });
 
     return level;
