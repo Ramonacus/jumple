@@ -8,7 +8,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   deceleration = 10;
   speed = 0;
   airborneSpeed = 200;
-  jumpSpeed = -450;
+  jumpSpeed = -375;
 
   isJumping = false;
   canCoyoteJump = false;
@@ -26,16 +26,17 @@ class Player extends Phaser.Physics.Arcade.Sprite {
 
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player');
+    this.createAnimations(scene);
+  }
 
-    scene.add.existing(this);
-    scene.physics.add.existing(this);
+  spawn(x: number, y: number) {
+    this.setPosition(x, y);
+    this.scene.add.existing(this);
+    this.scene.physics.add.existing(this);
 
     this.body.setSize(20, 22);
     this.body.setOffset(6, 6);
     this.setGravityY(400);
-
-    this.setCollideWorldBounds(true);
-    this.createAnimations(scene);
   }
 
   createAnimations(scene: Scene) {
@@ -78,6 +79,10 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
+    if (!this.body) {
+      return;
+    }
+
     if (cursors.left.isDown) {
       this.flipX = true;
     } else if (cursors.right.isDown) {
@@ -114,11 +119,10 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(this.airborneSpeed);
     } else {
       const newSpeedX = Math.abs(speedX) < 10 ? 0 : speedX * 0.95;
-
       this.setVelocityX(newSpeedX);
     }
 
-    if (this.body.onWall()) {
+    if (cursors.space.isDown && this.body.onWall()) {
       this.grabWall();
       return;
     }
@@ -171,27 +175,25 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    if (
-      (this.wallDirection === 'left' && cursors.left.isDown) ||
-      (this.wallDirection === 'right' && cursors.right.isDown)
-    ) {
-      this.setVelocityY(0);
+    if (!cursors.space.isDown) {
+      this.leaveWall();
       return;
     }
 
-    this.inWallBuffer = window.setTimeout(() => {
-      this.leaveWall();
-    }, this.inWallBufferTime);
+    this.body.setVelocityY(0);
   }
 
   private grabWall() {
     this.isInWall = true;
     this.wallDirection = this.body.blocked.left ? 'left' : 'right';
+    this.body.moves = false;
+    this.play('jump-down', true);
   }
 
   private leaveWall() {
     this.isInWall = false;
     this.wallDirection = null;
+    this.body.moves = true;
   }
 
   private canJump() {

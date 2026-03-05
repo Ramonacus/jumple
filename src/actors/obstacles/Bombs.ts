@@ -1,6 +1,6 @@
 import Phaser, { Scene } from 'phaser';
 
-import { Player } from './Player';
+import { Player } from '../Player';
 
 class Bombs extends Phaser.Physics.Arcade.Group {
   player: Player;

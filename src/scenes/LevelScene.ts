@@ -1,50 +1,74 @@
-import { Scene } from 'phaser';
-import { Spawn } from '../actors/Spawn';
-import { RoomType } from '../types/rooms';
-import { RoomManager } from '../rooms/RoomsManager';
+import { Exit } from '../actors/objects/Exit';
+import { Spawn } from '../actors/objects/Spawn';
+import { Obstacle, Spike } from '../actors/obstacles/Spikes';
+import { Player } from '../actors/Player';
+import { PlayerEvents } from '../types/events';
 import {
   Layer,
+  LayerName,
   LayerType,
   ObjectType,
   ObstacleType,
   RoomObject,
   RoomTilemap,
 } from '../types/map';
-import { TILE_SIZE } from '../game';
-import { Spike } from '../actors/Spikes';
 
-class Level extends Phaser.GameObjects.GameObject {
-  private readonly ROOM_WIDTH_TILES = 45; // TO DO: Determine a good size of the rooms
+class LevelScene extends Phaser.Scene {
+  private readonly ROOM_WIDTH_TILES = 16; // TO DO: Determine a good size of the rooms
 
-  private readonly ROOM_HEIGHT_TILES = 60;
+  private readonly ROOM_HEIGHT_TILES = 16;
 
-  private _platformsLayer: Phaser.Tilemaps.TilemapLayer | null;
+  private camera: Phaser.Cameras.Scene2D.Camera;
+
+  private terrain: Phaser.Tilemaps.TilemapLayer | null;
 
   private spawn: Spawn;
 
-  private _obstacles: Phaser.GameObjects.Group;
+  private exit: Exit;
 
-  get obstacles(): Phaser.GameObjects.Group {
-    return this._obstacles;
+  private player: Player;
+
+  private obstacles: Phaser.GameObjects.Group;
+
+  private layout: RoomTilemap[][];
+
+  preload() {
+    this.load.spritesheet('player', 'assets/player-sheet.png', {
+      frameWidth: 32,
+      frameHeight: 32,
+    });
+    this.load.image('tileset', 'assets/tilesets/base_tileset.png');
+    this.load.image('spikes', 'assets/spikes.png');
+    this.load.image('spawn', 'assets/spawn.png');
+    this.load.image('exit', 'assets/exit.png');
   }
 
-  get platformsLayer(): Phaser.Tilemaps.TilemapLayer {
-    if (!this._platformsLayer) {
-      throw new Error('Platforms layer does not exist.');
+  constructor(layout: RoomTilemap[][]) {
+    super();
+
+    this.layout = layout;
+    this.obstacles = this.add.group();
+  }
+
+  create() {
+    this.camera = this.cameras.main;
+    this.player = new Player(this, 0, 0);
+
+    this.events.addListener(PlayerEvents.DEATH, this.onPlayerDeath, this);
+  }
+
+  update() {
+    if (!this.input.keyboard) {
+      throw new Error('No keyboard!');
     }
 
-    return this._platformsLayer;
+    const cursors = this.input.keyboard.createCursorKeys();
+    this.player.update(cursors);
   }
 
-  constructor(
-    public scene: Scene,
-    private roomsManager: RoomManager,
-    private layout: RoomType[][]
-  ) {
-    super(scene, '');
-    this._obstacles = this.scene.add.group();
-
-    this.generateLevel();
+  onPlayerDeath(): void {
+    console.log('Player has died. Game Over.');
+    this.physics.pause();
   }
 
   generateLevel() {
@@ -57,26 +81,13 @@ class Level extends Phaser.GameObjects.GameObject {
 
     for (let i = 0; i < this.layout.length; i++) {
       for (let j = 0; j < this.layout[0].length; j++) {
-        const roomType = this.layout[i][j];
-        const room = this.roomsManager.getRandomRoomOfType(roomType);
-
-        if (
-          room.width !== this.ROOM_WIDTH_TILES ||
-          room.height !== this.ROOM_HEIGHT_TILES
-        ) {
-          throw new Error(
-            `Room size mismatch. Expected ${this.ROOM_WIDTH_TILES}x${this.ROOM_HEIGHT_TILES}, got ${room.width}x${room.height}.`
-          );
-        }
-
+        const room = this.layout[i][j];
         const terrainLayer = room.layers.find(
-          (layer: Layer) => layer.name === LayerType.TERRAIN
+          (layer: Layer) => layer.type === LayerType.TERRAIN
         );
 
         if (!terrainLayer) {
-          throw new Error(
-            `Terrain layer not found in room of type ${roomType}.`
-          );
+          throw new Error(`Terrain layer not found in room ${room.type}.`);
         }
 
         this.spawnRoomGameObjects(room, j, i);
@@ -85,25 +96,24 @@ class Level extends Phaser.GameObjects.GameObject {
     }
 
     level = this.fillLevelBorders(level);
-    const map = this.scene.make.tilemap({
+    const map = this.make.tilemap({
       data: level,
-      tileWidth: TILE_SIZE,
-      tileHeight: TILE_SIZE,
+      tileWidth: 16,
+      tileHeight: 16,
     });
 
     const tileset = map.addTilesetImage('tileset', 'tileset');
-    console.log('tileset', tileset);
     if (!tileset) {
       throw new Error('Could not create tileset for level.');
     }
 
-    this._platformsLayer = map.createLayer(0, tileset);
+    this.terrain = map.createLayer(0, tileset);
 
-    if (!this._platformsLayer) {
+    if (!this.terrain) {
       throw new Error('Could not generate the platforms layer.');
     }
 
-    this._platformsLayer.setCollisionByExclusion([-1]);
+    this.terrain.setCollisionByExclusion([-1]);
     return level;
   }
 
@@ -131,10 +141,10 @@ class Level extends Phaser.GameObjects.GameObject {
   ): void {
     room.layers.forEach((layer: Layer) => {
       switch (layer.name) {
-        case LayerType.OBJECTS:
+        case LayerName.OBJECTS:
           this.spawnRoomObjects(layer, offsetX, offsetY);
           break;
-        case LayerType.OBSTACLES:
+        case LayerName.OBSTACLES:
           this.spawnRoomObstacles(layer, offsetX, offsetY);
           break;
       }
@@ -155,6 +165,14 @@ class Level extends Phaser.GameObjects.GameObject {
         case ObjectType.SPAWN:
           this.spawn = this.instanceSpawnObject(obj, offsetX, offsetY);
           break;
+        case ObjectType.EXIT:
+          this.exit = new Exit(
+            this,
+            this.player,
+            obj.x + offsetX * this.ROOM_WIDTH_TILES * 16,
+            obj.y + offsetY * this.ROOM_HEIGHT_TILES * 16
+          );
+          break;
       }
     });
   }
@@ -169,15 +187,14 @@ class Level extends Phaser.GameObjects.GameObject {
     }
 
     obstaclesLayer.objects.forEach((obj: RoomObject) => {
-      console.log('Spawning obstacle:', obj);
       switch (obj.name) {
         case ObstacleType.SPIKES:
-          this._obstacles.add(
+          this.obstacles.add(
             new Spike(
               obj,
-              this.scene,
-              obj.x + offsetX * this.ROOM_WIDTH_TILES * TILE_SIZE,
-              obj.y + offsetY * this.ROOM_HEIGHT_TILES * TILE_SIZE
+              this,
+              obj.x + offsetX * this.ROOM_WIDTH_TILES * 16,
+              obj.y + offsetY * this.ROOM_HEIGHT_TILES * 16
             )
           );
           break;
@@ -191,9 +208,9 @@ class Level extends Phaser.GameObjects.GameObject {
     offsetY: number
   ) {
     const spawn = new Spawn(
-      this.scene,
-      spawnObject.x + offsetX * this.ROOM_WIDTH_TILES * TILE_SIZE,
-      spawnObject.y + offsetY * this.ROOM_HEIGHT_TILES * TILE_SIZE,
+      this,
+      spawnObject.x + offsetX * this.ROOM_WIDTH_TILES * 16,
+      spawnObject.y + offsetY * this.ROOM_HEIGHT_TILES * 16,
       spawnObject.width,
       spawnObject.height
     );
@@ -216,13 +233,34 @@ class Level extends Phaser.GameObjects.GameObject {
     return level;
   }
 
-  public hasSpawn(): boolean {
+  hasSpawn(): boolean {
     return !!this.spawn;
   }
 
-  public getSpawn(): Spawn {
+  getSpawn(): Spawn {
     return this.spawn;
+  }
+
+  start(): void {
+    this.setPlayerCollisions();
+    this.spawn.spawnPlayer(this.player);
+  }
+
+  // TODO: Move to Player?
+  private setPlayerCollisions(): void {
+    if (!this.terrain) {
+      throw new Error('No terrain layer to set collisions with!');
+    }
+
+    this.physics.add.collider(this.player, this.terrain);
+    this.physics.add.collider(this.player, this.obstacles, (_, obstacle) =>
+      this.onPlayerObstacleCollision(this.player, obstacle as Obstacle)
+    );
+  }
+
+  private onPlayerObstacleCollision(player: Player, obstacle: Obstacle): void {
+    obstacle.onPlayerCollision(player);
   }
 }
 
-export { Level };
+export { LevelScene };
