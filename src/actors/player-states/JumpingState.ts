@@ -6,6 +6,7 @@ import { PlayerState } from './PlayerState';
  *
  * Transitions:
  * - → FallingState: When vertical velocity >= 0 (reached peak)
+ * - → WallClingState: When SPACE pressed while touching wall
  */
 export class JumpingState implements PlayerState {
   enter(player: any): void {
@@ -21,6 +22,12 @@ export class JumpingState implements PlayerState {
     // Check if reached peak → Falling
     if (speedY >= 0) {
       player.changeState(player.states.get('falling'));
+      return;
+    }
+
+    // Check for wall cling → WallCling
+    if (cursors.space.isDown && player.body.onWall()) {
+      player.changeState(player.states.get('wall-cling'));
       return;
     }
 
