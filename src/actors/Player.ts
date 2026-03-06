@@ -7,6 +7,7 @@ import {
   JumpingState,
   FallingState,
   LandingState,
+  WallClingState,
 } from './player-states';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
@@ -50,6 +51,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.states.set('jumping', new JumpingState());
     this.states.set('falling', new FallingState());
     this.states.set('landing', new LandingState());
+    this.states.set('wall-cling', new WallClingState());
   }
 
   spawn(x: number, y: number) {
