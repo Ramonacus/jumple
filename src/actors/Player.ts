@@ -28,9 +28,6 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   jumpBufferTimeout: number | undefined;
   isJumpBuffered = false;
 
-  isInWall = false;
-  inWallBuffer: number | undefined;
-  inWallBufferTime = 200;
   wallDirection: 'left' | 'right' | null = null;
 
   lastDirection = 1;
@@ -125,49 +122,8 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       this.flipX = false;
     }
 
-    // Wall climbing overrides state machine
-    if (this.isInWall) {
-      this.updateOnWall(cursors);
-      return;
-    }
-
     // Delegate to current state
     this.currentState.update(this, cursors);
-  }
-
-  private updateOnWall(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    if (
-      cursors.up.isDown &&
-      ((this.wallDirection === 'left' && cursors.right.isDown) ||
-        (this.wallDirection === 'right' && cursors.left.isDown))
-    ) {
-      const direction = this.body.blocked.left ? -1 : 1;
-      this.isJumping = true;
-      this.setVelocityY(this.jumpSpeed);
-      this.setVelocityX(this.jumpSpeed * direction);
-      this.leaveWall();
-      return;
-    }
-
-    if (!cursors.space.isDown) {
-      this.leaveWall();
-      return;
-    }
-
-    this.body.setVelocityY(0);
-  }
-
-  private grabWall() {
-    this.isInWall = true;
-    this.wallDirection = this.body.blocked.left ? 'left' : 'right';
-    this.body.moves = false;
-    this.play('jump-down', true);
-  }
-
-  private leaveWall() {
-    this.isInWall = false;
-    this.wallDirection = null;
-    this.body.moves = true;
   }
 
   takeHit() {
