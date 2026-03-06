@@ -64,14 +64,21 @@ export type RoomObjectProperty = {
   value: string;
 };
 
-export enum LayerType {
+export enum LayerName {
   TERRAIN = 'Terrain',
   OBJECTS = 'Objects',
   OBSTACLES = 'Obstacles',
 }
 
+export enum LayerType {
+  TERRAIN = 'tilelayer',
+  OBJECTS = 'objectgroup',
+}
+
 export enum ObjectType {
   SPAWN = 'Spawn',
+  EXIT = 'Exit',
+  START = 'Star',
 }
 
 export enum ObstacleType {

@@ -12,16 +12,17 @@ Install dependencies and run `npm run dev` to start the development server.
   - Tile render order: Left Up
   - Map size:
     - Fixed
-    - Width: 45 tiles
-    - Height: 60 tiles
+    - Width: 24 tiles
+    - Height: 24 tiles
   - Tile size:
     - Width: 16px
     - Height: 16px
 
-- Inside the 'Tilesets' tool click on 'New Tileset...' and select the tileset `assets/maps/tileset.png` as the source. Save the `.tsj` locally on your PC.
+- Inside the 'Tilesets' tool click on 'New Tileset...' and select the tileset `assets/maps/tileset.png` as the source. Save the `.tsj` in `assets/maps/tileset.png`.
+- We need to modify the export options in order to embed the objects used into the final JSON. Click on `Edit` > `Preferences` and check `Detach templates` and `Resolve object types and properties`
 
-- Change the tile layer name to `Terrain`.
 - Draw the level in the canvas.
-- When you are done, export the tilemap inside `assets/rooms/[ROOM_TYPE]` as a JSON file.
+- When you are done, export the tilemap inside `assets/rooms/[ROOM_TYPE]` as a JSON file. **Important** Not saving with Ctrl + S, use `File` > `Export As` or `Ctrl + E`.
 
-- The Spawn object, found in `public/assets/object-templates` can be added to an "Object Layer" called Objects (see the start room example)
+- Room objects, found in `public/assets/object-templates` can be added to an "Object Layer" called **Objects** (see the start room example)
+- Obstacles must be placed in another "Object Layer" called **Obstacles**

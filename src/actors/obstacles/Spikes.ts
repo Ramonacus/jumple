@@ -1,11 +1,10 @@
-import { TILE_SIZE } from '../game';
-import { Player } from './Player';
+import { Player } from '../Player';
 import {
   RoomObject,
   ObjectPlacement,
   RoomObjectPropertyName,
   RoomObjectProperty,
-} from '../types/map';
+} from '../../types/map';
 
 abstract class Obstacle extends Phaser.GameObjects.Sprite {
   abstract onPlayerCollision(player: Player): void;
@@ -14,10 +13,10 @@ abstract class Obstacle extends Phaser.GameObjects.Sprite {
 class Spike extends Obstacle {
   private readonly COLLIDER_HEIGHT = 5;
 
-  private readonly COLLIDER_WIDTH = TILE_SIZE;
+  private readonly COLLIDER_WIDTH = 16;
 
   constructor(object: RoomObject, scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x + TILE_SIZE / 2, y + TILE_SIZE / 2, 'spikes');
+    super(scene, x + 16 / 2, y + 16 / 2, 'spikes');
     this.scene.add.existing(this);
     this.scene.physics.add.existing(this);
 
@@ -53,7 +52,7 @@ class Spike extends Obstacle {
         break;
       case ObjectPlacement.RIGHT:
         this.body.setSize(this.COLLIDER_HEIGHT, this.COLLIDER_WIDTH);
-        this.body.setOffset(TILE_SIZE - this.COLLIDER_HEIGHT, 0);
+        this.body.setOffset(16 - this.COLLIDER_HEIGHT, 0);
         break;
       case ObjectPlacement.LEFT:
         this.body.setSize(this.COLLIDER_HEIGHT, this.COLLIDER_WIDTH);
@@ -61,7 +60,7 @@ class Spike extends Obstacle {
         break;
       default:
         this.body.setSize(this.COLLIDER_WIDTH, this.COLLIDER_HEIGHT);
-        this.body.setOffset(0, TILE_SIZE - this.COLLIDER_HEIGHT);
+        this.body.setOffset(0, 16 - this.COLLIDER_HEIGHT);
         break;
     }
   }

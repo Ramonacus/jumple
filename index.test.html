@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  </head>
+
+  <script>
+    document.addEventListener('roomsLoaded', onRoomsLoaded);
+
+    function onRoomsLoaded(event) {
+      const roomSelect = document.getElementById('room-select');
+      if (roomSelect) {
+        roomSelect.innerHTML = '';
+
+        const rooms = event.rooms;
+        rooms.forEach((room) => {
+          const option = document.createElement('option');
+          option.textContent = room;
+          option.setAttribute('value', room);
+          roomSelect.appendChild(option);
+        });
+      }
+    }
+  </script>
+  <body style="font-family: sans-serif">
+    <section>
+      <select id="room-select"></select>
+      <main>
+        <script type="module" src="/room-test/main.ts"></script>
+      </main>
+      <footer>
+        <i style="font-size: 12px">Spawn the player with Shift + Click</i>
+      </footer>
+    </section>
+  </body>
+</html>

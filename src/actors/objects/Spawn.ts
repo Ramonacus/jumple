@@ -1,4 +1,4 @@
-import { Player } from './Player';
+import { Player } from '../Player';
 
 class Spawn extends Phaser.GameObjects.Sprite {
   constructor(
@@ -8,15 +8,15 @@ class Spawn extends Phaser.GameObjects.Sprite {
     width: number,
     height: number
   ) {
-    super(scene, x, y + 32, 'spawn');
+    super(scene, x, y + 16, 'spawn');
 
     this.width = width;
     this.height = height;
     this.scene.add.existing(this);
   }
 
-  spawnPlayer(): Player {
-    return new Player(this.scene, this.x, this.y);
+  spawnPlayer(player: Player): void {
+    player.spawn(this.x, this.y);
   }
 }
 
