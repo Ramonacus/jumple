@@ -1,5 +1,13 @@
 import Phaser, { Scene } from 'phaser';
 import { PlayerEvents } from '../types/events';
+import {
+  PlayerState,
+  IdleState,
+  WalkingState,
+  JumpingState,
+  FallingState,
+  LandingState,
+} from './player-states';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
@@ -24,6 +32,12 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   inWallBufferTime = 200;
   wallDirection: 'left' | 'right' | null = null;
 
+  lastDirection = 1;
+
+  // State machine
+  currentState!: PlayerState;
+  states: Map<string, PlayerState> = new Map();
+
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player');
 
@@ -36,6 +50,23 @@ class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.setCollideWorldBounds(true);
     this.createAnimations(scene);
+
+    // Initialize state machine
+    this.states.set('idle', new IdleState());
+    this.states.set('walking', new WalkingState());
+    this.states.set('jumping', new JumpingState());
+    this.states.set('falling', new FallingState());
+    this.states.set('landing', new LandingState());
+
+    // Start in idle state
+    this.currentState = this.states.get('idle')!;
+    this.currentState.enter(this);
+  }
+
+  changeState(newState: PlayerState): void {
+    this.currentState?.exit(this);
+    this.currentState = newState;
+    this.currentState.enter(this);
   }
 
   createAnimations(scene: Scene) {
@@ -78,84 +109,23 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
+    // Handle sprite flipping based on input
     if (cursors.left.isDown) {
       this.flipX = true;
     } else if (cursors.right.isDown) {
       this.flipX = false;
     }
 
+    // Wall climbing overrides state machine
     if (this.isInWall) {
       this.updateOnWall(cursors);
-    } else if (this.body.onFloor()) {
-      this.updateGrounded(cursors);
-    } else {
-      this.updateAirborne(cursors);
-    }
-  }
-
-  private updateAirborne(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    const { x: speedX, y: speedY } = this.body.velocity;
-
-    if (!this.isJumping && this.canCoyoteJump) {
-      this.setCoyoteTimeout();
-    }
-
-    if (Math.abs(speedY) < 10) {
-      this.play('jump-float', true);
-    } else if (speedY > 0) {
-      this.play('jump-down', true);
-    } else {
-      this.play('jump-up', true);
-    }
-
-    if (cursors.left.isDown) {
-      this.setVelocityX(-this.airborneSpeed);
-    } else if (cursors.right.isDown) {
-      this.setVelocityX(this.airborneSpeed);
-    } else {
-      const newSpeedX = Math.abs(speedX) < 10 ? 0 : speedX * 0.95;
-
-      this.setVelocityX(newSpeedX);
-    }
-
-    if (this.body.onWall()) {
-      this.grabWall();
       return;
     }
 
-    this.handleJump(cursors);
+    // Delegate to current state
+    this.currentState.update(this, cursors);
   }
 
-  private updateGrounded(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    this.isJumping = false;
-    this.canCoyoteJump = true;
-    this.clearCoyoteTimeout();
-
-    if (this.isJumpBuffered) {
-      this.jump();
-      this.clearJumpBuffer();
-    }
-
-    if (cursors.left.isDown) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-      this.setVelocityX(-this.speed);
-      this.play('walk', true);
-    } else if (cursors.right.isDown) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-      this.setVelocityX(this.speed);
-      this.play('walk', true);
-    } else if (this.speed > this.deceleration) {
-      const decelerationDirection = this.body.velocity.x < 0 ? -1 : 1;
-      this.speed -= this.deceleration;
-      this.setVelocityX(this.speed * decelerationDirection);
-    } else {
-      this.speed = 0;
-      this.setVelocityX(0);
-      this.play('idle', true);
-    }
-
-    this.handleJump(cursors);
-  }
 
   private updateOnWall(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (
@@ -194,55 +164,24 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.wallDirection = null;
   }
 
-  private canJump() {
-    return this.body.onFloor() || this.canCoyoteJump;
-  }
-
-  private handleJump(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    if (cursors.up.isDown && this.canJump()) {
-      this.jump();
-    } else if (cursors.up.isDown && !this.canJump()) {
-      this.bufferJump();
-    }
-  }
-
-  private jump() {
-    this.isJumping = true;
-    this.canCoyoteJump = false;
-    this.clearCoyoteTimeout();
-    this.setVelocityY(this.jumpSpeed);
-  }
-
-  private setCoyoteTimeout() {
-    this.coyoteTimeTimeout = setTimeout(() => {
-      this.canCoyoteJump = false;
-    }, this.coyoteTime);
-  }
-
-  private clearCoyoteTimeout() {
-    if (this.coyoteTimeTimeout) {
-      clearTimeout(this.coyoteTimeTimeout);
-      this.coyoteTimeTimeout = 0;
-    }
-  }
-
-  private bufferJump() {
-    this.isJumpBuffered = true;
-    this.jumpBufferTimeout = setTimeout(() => {
-      this.isJumpBuffered = false;
-    }, this.jumpBufferTime);
-  }
-
-  private clearJumpBuffer() {
-    this.isJumpBuffered = false;
-    if (this.jumpBufferTimeout) {
-      clearTimeout(this.jumpBufferTimeout);
-      this.jumpBufferTimeout = 0;
-    }
-  }
 
   takeHit() {
     this.scene.events.emit(PlayerEvents.DEATH);
+  }
+
+  destroy(fromScene?: boolean): void {
+    // Clean up timers
+    if (this.coyoteTimeTimeout) {
+      clearTimeout(this.coyoteTimeTimeout);
+    }
+    if (this.jumpBufferTimeout) {
+      clearTimeout(this.jumpBufferTimeout);
+    }
+
+    // Exit current state
+    this.currentState?.exit(this);
+
+    super.destroy(fromScene);
   }
 }
 
