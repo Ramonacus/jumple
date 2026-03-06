@@ -28,6 +28,13 @@ export class WalkingState implements PlayerState {
       return;
     }
 
+    // Check if blocked by wall - reset speed to stop immediately
+    const blockedLeft = player.body.blocked.left && player.lastDirection === -1;
+    const blockedRight = player.body.blocked.right && player.lastDirection === 1;
+    if (blockedLeft || blockedRight) {
+      player.speed = 0;
+    }
+
     // Handle horizontal movement
     if (cursors.left.isDown) {
       player.lastDirection = -1;
