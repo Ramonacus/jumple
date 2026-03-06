@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 
 import { MainScene } from './scenes/main';
 
-export const GAME_WIDTH = 640; // 40 * 16
-export const GAME_HEIGHT = 480; // 30 * 16
+export const GAME_WIDTH = 640;
+export const GAME_HEIGHT = 480;
 export const TILE_SIZE = 16;
 
 const config: Phaser.Types.Core.GameConfig = {
