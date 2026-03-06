@@ -6,6 +6,7 @@ import { PlayerState } from './PlayerState';
  *
  * Transitions:
  * - → LandingState: When touches ground
+ * - → WallClingState: When SPACE pressed while touching wall
  * - → JumpingState: When jump pressed during coyote time
  */
 export class FallingState implements PlayerState {
@@ -24,6 +25,12 @@ export class FallingState implements PlayerState {
     // Check if landed → Landing
     if (player.body.onFloor()) {
       player.changeState(player.states.get('landing'));
+      return;
+    }
+
+    // Check for wall cling → WallCling
+    if (cursors.space.isDown && player.body.onWall()) {
+      player.changeState(player.states.get('wall-cling'));
       return;
     }
 
