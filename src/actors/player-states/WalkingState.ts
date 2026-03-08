@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PlayerState } from './PlayerState';
+import { Player } from '../Player';
 
 /**
  * WalkingState: Player is on ground with horizontal input
@@ -10,11 +11,14 @@ import { PlayerState } from './PlayerState';
  * - → FallingState: When no longer on floor
  */
 export class WalkingState implements PlayerState {
-  enter(player: any): void {
+  enter(player: Player): void {
     player.play('walk', true);
   }
 
-  update(player: any, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
+  update(
+    player: Player,
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
     // Check if we fell off a ledge
     if (!player.body.onFloor()) {
       player.canCoyoteJump = true;
@@ -30,7 +34,8 @@ export class WalkingState implements PlayerState {
 
     // Check if blocked by wall - reset speed to stop immediately
     const blockedLeft = player.body.blocked.left && player.lastDirection === -1;
-    const blockedRight = player.body.blocked.right && player.lastDirection === 1;
+    const blockedRight =
+      player.body.blocked.right && player.lastDirection === 1;
     if (blockedLeft || blockedRight) {
       player.speed = 0;
     }
@@ -38,12 +43,18 @@ export class WalkingState implements PlayerState {
     // Handle horizontal movement
     if (cursors.left.isDown) {
       player.lastDirection = -1;
-      player.speed = Math.min(player.speed + player.acceleration, player.maxSpeed);
+      player.speed = Math.min(
+        player.speed + player.acceleration,
+        player.maxSpeed
+      );
       player.setVelocityX(-player.speed);
       player.play('walk', true);
     } else if (cursors.right.isDown) {
       player.lastDirection = 1;
-      player.speed = Math.min(player.speed + player.acceleration, player.maxSpeed);
+      player.speed = Math.min(
+        player.speed + player.acceleration,
+        player.maxSpeed
+      );
       player.setVelocityX(player.speed);
       player.play('walk', true);
     } else if (player.speed > player.deceleration) {
@@ -57,7 +68,7 @@ export class WalkingState implements PlayerState {
     }
   }
 
-  exit(player: any): void {
+  exit(player: Player): void {
     // No cleanup needed
   }
 }

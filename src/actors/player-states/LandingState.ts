@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PlayerState } from './PlayerState';
+import { Player } from '../Player';
 
 /**
  * LandingState: Player just touched ground (brief transition)
@@ -10,7 +11,7 @@ import { PlayerState } from './PlayerState';
  * - → IdleState: If no input
  */
 export class LandingState implements PlayerState {
-  enter(player: any): void {
+  enter(player: Player): void {
     // Reset airborne flags
     player.isJumping = false;
     player.canCoyoteJump = false;
@@ -22,7 +23,10 @@ export class LandingState implements PlayerState {
     }
   }
 
-  update(player: any, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
+  update(
+    player: Player,
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
     // Check for buffered jump
     if (player.isJumpBuffered) {
       player.isJumpBuffered = false;
@@ -44,7 +48,7 @@ export class LandingState implements PlayerState {
     player.changeState(player.states.get('idle'));
   }
 
-  exit(player: any): void {
+  exit(player: Player): void {
     // No cleanup needed
   }
 }

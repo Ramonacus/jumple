@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { Player } from '../Player';
 
 /**
  * Interface for all player movement states.
@@ -9,17 +10,17 @@ export interface PlayerState {
    * Called once when entering this state.
    * Use for initialization: animations, timers, flags.
    */
-  enter(player: any): void;
+  enter(player: Player): void;
 
   /**
    * Called every frame while in this state.
    * Handle input, physics, and state transitions.
    */
-  update(player: any, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void;
+  update(player: Player, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void;
 
   /**
    * Called once when exiting this state.
    * Use for cleanup: clear timers, finalize values.
    */
-  exit(player: any): void;
+  exit(player: Player): void;
 }

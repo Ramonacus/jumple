@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PlayerState } from './PlayerState';
+import { Player } from '../Player';
 
 /**
  * IdleState: Player is on ground with no horizontal input
@@ -10,13 +11,16 @@ import { PlayerState } from './PlayerState';
  * - → FallingState: When no longer on floor
  */
 export class IdleState implements PlayerState {
-  enter(player: any): void {
+  enter(player: Player): void {
     player.speed = 0;
     player.setVelocityX(0);
     player.play('idle', true);
   }
 
-  update(player: any, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
+  update(
+    player: Player,
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
     // Check if we fell off a ledge
     if (!player.body.onFloor()) {
       player.canCoyoteJump = true;
@@ -37,7 +41,7 @@ export class IdleState implements PlayerState {
     }
   }
 
-  exit(player: any): void {
+  exit(player: Player): void {
     // No cleanup needed
   }
 }

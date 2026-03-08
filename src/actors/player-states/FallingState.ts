@@ -1,16 +1,17 @@
 import Phaser from 'phaser';
 import { PlayerState } from './PlayerState';
+import { Player } from '../Player';
 
 /**
  * FallingState: Player is airborne moving downward
  *
  * Transitions:
  * - → LandingState: When touches ground
- * - → WallClingState: When SPACE pressed while touching wall
- * - → JumpingState: When jump pressed during coyote time
+ * - → WallJumpState: When on wall + jump input + opposite direction key pressed
+ * - → JumpingState: When jump pressed during coyote time or from jump buffer
  */
 export class FallingState implements PlayerState {
-  enter(player: any): void {
+  enter(player: Player): void {
     // Set up coyote time if we have it
     if (player.canCoyoteJump) {
       player.coyoteTimeTimeout = setTimeout(() => {
@@ -19,7 +20,10 @@ export class FallingState implements PlayerState {
     }
   }
 
-  update(player: any, cursors: Phaser.Types.Input.Keyboard.CursorKeys): void {
+  update(
+    player: Player,
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
     const { x: speedX, y: speedY } = player.body.velocity;
 
     // Check if landed → Landing
@@ -28,9 +32,9 @@ export class FallingState implements PlayerState {
       return;
     }
 
-    // Check for wall cling → WallCling
-    if (cursors.space.isDown && player.body.onWall()) {
-      player.changeState(player.states.get('wall-cling'));
+    // Check for wall jump → WallJump
+    if (player.canPerformWallJump(cursors)) {
+      player.changeState(player.states.get('wall-jump'));
       return;
     }
 
@@ -66,7 +70,7 @@ export class FallingState implements PlayerState {
     }
   }
 
-  exit(player: any): void {
+  exit(player: Player): void {
     // Clear coyote timeout
     if (player.coyoteTimeTimeout) {
       clearTimeout(player.coyoteTimeTimeout);

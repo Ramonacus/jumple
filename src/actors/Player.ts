@@ -7,7 +7,7 @@ import {
   JumpingState,
   FallingState,
   LandingState,
-  WallClingState,
+  WallJumpState,
 } from './player-states';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
@@ -48,7 +48,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.states.set('jumping', new JumpingState());
     this.states.set('falling', new FallingState());
     this.states.set('landing', new LandingState());
-    this.states.set('wall-cling', new WallClingState());
+    this.states.set('wall-jump', new WallJumpState());
   }
 
   spawn(x: number, y: number) {
@@ -65,7 +65,11 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.currentState.enter(this);
   }
 
-  changeState(newState: PlayerState): void {
+  changeState(newState: PlayerState | undefined): void {
+    if (!newState) {
+      throw new Error('Trying to enter an undefined state...');
+    }
+
     this.currentState?.exit(this);
     this.currentState = newState;
     this.currentState.enter(this);
@@ -108,6 +112,18 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       frames: [{ key: 'player', frame: 11 }],
       frameRate: 1,
     });
+  }
+
+  canPerformWallJump(cursors: Phaser.Types.Input.Keyboard.CursorKeys): boolean {
+    const isOnLeftWall = this.body.blocked.left;
+    const isOnRightWall = this.body.blocked.right;
+    const isJumpInput = cursors.up.isDown;
+
+    const validMultijump =
+      (isOnLeftWall && cursors.right.isDown) ||
+      (isOnRightWall && cursors.left.isDown);
+
+    return (isOnLeftWall || isOnRightWall) && isJumpInput && validMultijump;
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
