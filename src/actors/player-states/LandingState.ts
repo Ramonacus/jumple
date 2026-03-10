@@ -29,11 +29,7 @@ export class LandingState implements PlayerState {
   ): void {
     // Check for buffered jump
     if (player.isJumpBuffered) {
-      player.isJumpBuffered = false;
-      if (player.jumpBufferTimeout) {
-        clearTimeout(player.jumpBufferTimeout);
-        player.jumpBufferTimeout = undefined;
-      }
+      player.clearJumpBuffer();
       player.changeState(player.states.get('jumping'));
       return;
     }

@@ -24,6 +24,7 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   coyoteTime = 100;
   coyoteTimeTimeout: number | undefined;
 
+  jumpDirectionBuffer: 'left' | 'right' | null = null;
   jumpBufferTime = 125;
   jumpBufferTimeout: number | undefined;
   isJumpBuffered = false;
@@ -114,16 +115,19 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  canPerformWallJump(cursors: Phaser.Types.Input.Keyboard.CursorKeys): boolean {
+  canPerformWallJump(): boolean {
+    if (!this.isJumpBuffered) {
+      return false;
+    }
+
     const isOnLeftWall = this.body.blocked.left;
     const isOnRightWall = this.body.blocked.right;
-    const isJumpInput = cursors.up.isDown;
 
     const validMultijump =
-      (isOnLeftWall && cursors.right.isDown) ||
-      (isOnRightWall && cursors.left.isDown);
+      (isOnLeftWall && this.jumpDirectionBuffer === 'right') ||
+      (isOnRightWall && this.jumpDirectionBuffer === 'left');
 
-    return (isOnLeftWall || isOnRightWall) && isJumpInput && validMultijump;
+    return (isOnLeftWall || isOnRightWall) && validMultijump;
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
@@ -138,8 +142,44 @@ class Player extends Phaser.Physics.Arcade.Sprite {
       this.flipX = false;
     }
 
+    this.updateJumpBuffer(cursors);
+
     // Delegate to current state
     this.currentState.update(this, cursors);
+  }
+
+  private updateJumpBuffer(
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
+    if (!cursors.up.isDown) {
+      return;
+    }
+
+    if (this.jumpBufferTimeout) {
+      clearTimeout(this.jumpBufferTimeout);
+    }
+
+    if (cursors.left.isDown) {
+      this.jumpDirectionBuffer = 'left';
+    } else if (cursors.right.isDown) {
+      this.jumpDirectionBuffer = 'right';
+    } else {
+      this.jumpDirectionBuffer = null;
+    }
+
+    this.isJumpBuffered = true;
+    this.jumpBufferTimeout = setTimeout(() => {
+      this.clearJumpBuffer();
+    });
+  }
+
+  clearJumpBuffer(): void {
+    if (this.jumpBufferTimeout) {
+      clearTimeout(this.jumpBufferTimeout);
+    }
+
+    this.isJumpBuffered = false;
+    this.jumpDirectionBuffer = null;
   }
 
   takeHit() {

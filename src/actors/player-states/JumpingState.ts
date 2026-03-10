@@ -24,7 +24,7 @@ export class JumpingState implements PlayerState {
     const { x: speedX, y: speedY } = player.body.velocity;
 
     // Check for wall jump → WallJump (can wall jump while ascending)
-    if (player.canPerformWallJump(cursors)) {
+    if (player.canPerformWallJump()) {
       player.changeState(player.states.get('wall-jump'));
       return;
     }

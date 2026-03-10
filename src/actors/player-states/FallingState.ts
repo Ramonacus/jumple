@@ -33,7 +33,7 @@ export class FallingState implements PlayerState {
     }
 
     // Check for wall jump → WallJump
-    if (player.canPerformWallJump(cursors)) {
+    if (player.canPerformWallJump()) {
       player.changeState(player.states.get('wall-jump'));
       return;
     }
@@ -59,14 +59,6 @@ export class FallingState implements PlayerState {
     if (cursors.up.isDown && player.canCoyoteJump) {
       player.changeState(player.states.get('jumping'));
       return;
-    }
-
-    // Handle jump buffering
-    if (cursors.up.isDown && !player.isJumpBuffered) {
-      player.isJumpBuffered = true;
-      player.jumpBufferTimeout = setTimeout(() => {
-        player.isJumpBuffered = false;
-      }, player.jumpBufferTime);
     }
   }
 
