@@ -1,5 +1,14 @@
 import Phaser, { Scene } from 'phaser';
 import { PlayerEvents } from '../types/events';
+import {
+  PlayerState,
+  IdleState,
+  WalkingState,
+  JumpingState,
+  FallingState,
+  LandingState,
+  WallJumpState,
+} from './player-states';
 
 class Player extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
@@ -15,18 +24,32 @@ class Player extends Phaser.Physics.Arcade.Sprite {
   coyoteTime = 100;
   coyoteTimeTimeout: number | undefined;
 
+  jumpDirectionBuffer: 'left' | 'right' | null = null;
   jumpBufferTime = 125;
   jumpBufferTimeout: number | undefined;
   isJumpBuffered = false;
 
-  isInWall = false;
-  inWallBuffer: number | undefined;
-  inWallBufferTime = 200;
   wallDirection: 'left' | 'right' | null = null;
+
+  lastDirection = 1;
+
+  // State machine
+  currentState!: PlayerState;
+  states: Map<string, PlayerState> = new Map();
 
   constructor(scene: Scene, x: number, y: number) {
     super(scene, x, y, 'player');
     this.createAnimations(scene);
+
+    this.createAnimations(scene);
+
+    // Initialize state machine
+    this.states.set('idle', new IdleState());
+    this.states.set('walking', new WalkingState());
+    this.states.set('jumping', new JumpingState());
+    this.states.set('falling', new FallingState());
+    this.states.set('landing', new LandingState());
+    this.states.set('wall-jump', new WallJumpState());
   }
 
   spawn(x: number, y: number) {
@@ -37,6 +60,20 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     this.body.setSize(20, 22);
     this.body.setOffset(6, 6);
     this.setGravityY(400);
+
+    // Start in idle state
+    this.currentState = this.states.get('idle')!;
+    this.currentState.enter(this);
+  }
+
+  changeState(newState: PlayerState | undefined): void {
+    if (!newState) {
+      throw new Error('Trying to enter an undefined state...');
+    }
+
+    this.currentState?.exit(this);
+    this.currentState = newState;
+    this.currentState.enter(this);
   }
 
   createAnimations(scene: Scene) {
@@ -78,173 +115,90 @@ class Player extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  canPerformWallJump(): boolean {
+    if (!this.isJumpBuffered) {
+      return false;
+    }
+
+    const isOnLeftWall = this.body.blocked.left;
+    const isOnRightWall = this.body.blocked.right;
+
+    const validMultijump =
+      (isOnLeftWall && this.jumpDirectionBuffer === 'right') ||
+      (isOnRightWall && this.jumpDirectionBuffer === 'left');
+
+    return (isOnLeftWall || isOnRightWall) && validMultijump;
+  }
+
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
     if (!this.body) {
       return;
     }
 
+    // Handle sprite flipping based on input
     if (cursors.left.isDown) {
       this.flipX = true;
     } else if (cursors.right.isDown) {
       this.flipX = false;
     }
 
-    if (this.isInWall) {
-      this.updateOnWall(cursors);
-    } else if (this.body.onFloor()) {
-      this.updateGrounded(cursors);
-    } else {
-      this.updateAirborne(cursors);
-    }
+    this.updateJumpBuffer(cursors);
+
+    // Delegate to current state
+    this.currentState.update(this, cursors);
   }
 
-  private updateAirborne(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    const { x: speedX, y: speedY } = this.body.velocity;
-
-    if (!this.isJumping && this.canCoyoteJump) {
-      this.setCoyoteTimeout();
-    }
-
-    if (Math.abs(speedY) < 10) {
-      this.play('jump-float', true);
-    } else if (speedY > 0) {
-      this.play('jump-down', true);
-    } else {
-      this.play('jump-up', true);
-    }
-
-    if (cursors.left.isDown) {
-      this.setVelocityX(-this.airborneSpeed);
-    } else if (cursors.right.isDown) {
-      this.setVelocityX(this.airborneSpeed);
-    } else {
-      const newSpeedX = Math.abs(speedX) < 10 ? 0 : speedX * 0.95;
-      this.setVelocityX(newSpeedX);
-    }
-
-    if (cursors.space.isDown && this.body.onWall()) {
-      this.grabWall();
+  private updateJumpBuffer(
+    cursors: Phaser.Types.Input.Keyboard.CursorKeys
+  ): void {
+    if (!cursors.up.isDown) {
       return;
     }
 
-    this.handleJump(cursors);
-  }
-
-  private updateGrounded(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    this.isJumping = false;
-    this.canCoyoteJump = true;
-    this.clearCoyoteTimeout();
-
-    if (this.isJumpBuffered) {
-      this.jump();
-      this.clearJumpBuffer();
-    }
-
-    if (cursors.left.isDown) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-      this.setVelocityX(-this.speed);
-      this.play('walk', true);
-    } else if (cursors.right.isDown) {
-      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-      this.setVelocityX(this.speed);
-      this.play('walk', true);
-    } else if (this.speed > this.deceleration) {
-      const decelerationDirection = this.body.velocity.x < 0 ? -1 : 1;
-      this.speed -= this.deceleration;
-      this.setVelocityX(this.speed * decelerationDirection);
-    } else {
-      this.speed = 0;
-      this.setVelocityX(0);
-      this.play('idle', true);
-    }
-
-    this.handleJump(cursors);
-  }
-
-  private updateOnWall(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    if (
-      cursors.up.isDown &&
-      ((this.wallDirection === 'left' && cursors.right.isDown) ||
-        (this.wallDirection === 'right' && cursors.left.isDown))
-    ) {
-      const direction = this.body.blocked.left ? -1 : 1;
-      this.isJumping = true;
-      this.setVelocityY(this.jumpSpeed);
-      this.setVelocityX(this.jumpSpeed * direction);
-      this.leaveWall();
-      return;
-    }
-
-    if (!cursors.space.isDown) {
-      this.leaveWall();
-      return;
-    }
-
-    this.body.setVelocityY(0);
-  }
-
-  private grabWall() {
-    this.isInWall = true;
-    this.wallDirection = this.body.blocked.left ? 'left' : 'right';
-    this.body.moves = false;
-    this.play('jump-down', true);
-  }
-
-  private leaveWall() {
-    this.isInWall = false;
-    this.wallDirection = null;
-    this.body.moves = true;
-  }
-
-  private canJump() {
-    return this.body.onFloor() || this.canCoyoteJump;
-  }
-
-  private handleJump(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    if (cursors.up.isDown && this.canJump()) {
-      this.jump();
-    } else if (cursors.up.isDown && !this.canJump()) {
-      this.bufferJump();
-    }
-  }
-
-  private jump() {
-    this.isJumping = true;
-    this.canCoyoteJump = false;
-    this.clearCoyoteTimeout();
-    this.setVelocityY(this.jumpSpeed);
-  }
-
-  private setCoyoteTimeout() {
-    this.coyoteTimeTimeout = setTimeout(() => {
-      this.canCoyoteJump = false;
-    }, this.coyoteTime);
-  }
-
-  private clearCoyoteTimeout() {
-    if (this.coyoteTimeTimeout) {
-      clearTimeout(this.coyoteTimeTimeout);
-      this.coyoteTimeTimeout = 0;
-    }
-  }
-
-  private bufferJump() {
-    this.isJumpBuffered = true;
-    this.jumpBufferTimeout = setTimeout(() => {
-      this.isJumpBuffered = false;
-    }, this.jumpBufferTime);
-  }
-
-  private clearJumpBuffer() {
-    this.isJumpBuffered = false;
     if (this.jumpBufferTimeout) {
       clearTimeout(this.jumpBufferTimeout);
-      this.jumpBufferTimeout = 0;
     }
+
+    if (cursors.left.isDown) {
+      this.jumpDirectionBuffer = 'left';
+    } else if (cursors.right.isDown) {
+      this.jumpDirectionBuffer = 'right';
+    } else {
+      this.jumpDirectionBuffer = null;
+    }
+
+    this.isJumpBuffered = true;
+    this.jumpBufferTimeout = setTimeout(() => {
+      this.clearJumpBuffer();
+    });
+  }
+
+  clearJumpBuffer(): void {
+    if (this.jumpBufferTimeout) {
+      clearTimeout(this.jumpBufferTimeout);
+    }
+
+    this.isJumpBuffered = false;
+    this.jumpDirectionBuffer = null;
   }
 
   takeHit() {
     this.scene.events.emit(PlayerEvents.DEATH);
+  }
+
+  destroy(fromScene?: boolean): void {
+    // Clean up timers
+    if (this.coyoteTimeTimeout) {
+      clearTimeout(this.coyoteTimeTimeout);
+    }
+    if (this.jumpBufferTimeout) {
+      clearTimeout(this.jumpBufferTimeout);
+    }
+
+    // Exit current state
+    this.currentState?.exit(this);
+
+    super.destroy(fromScene);
   }
 }
 
